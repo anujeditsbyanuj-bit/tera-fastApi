@@ -64,7 +64,6 @@ async function getValidApiKey() {
 const CACHE_TTL_MS = 2 * 60 * 60 * 1000; // 2 Hours
 
 const fetchTeraboxHandler = async (req, res) => {
-    // Support both GET (?url=...) and POST ({ "url": "..." })
     const url = req.method === 'GET' ? req.query.url : req.body.url;
 
     if (!url || !url.includes('terabox')) {
@@ -133,7 +132,6 @@ const fetchTeraboxHandler = async (req, res) => {
     }
 };
 
-// Map both methods to the same logic
 app.get('/api/fetch-terabox', fetchTeraboxHandler);
 app.post('/api/fetch-terabox', fetchTeraboxHandler);
 
@@ -152,7 +150,35 @@ app.post('/admin/add-keys', async (req, res) => {
 });
 
 // ==========================================
-// 5. DOCUMENTATION ENDPOINT (/docs)
+// 5. LIVE HEALTH CHECK ENDPOINT (/health)
+// ==========================================
+app.get('/health', async (req, res) => {
+    // 0 = disconnected, 1 = connected, 2 = connecting, 3 = disconnecting
+    const dbStatus = mongoose.connection.readyState === 1 ? "UP" : "DOWN";
+    
+    let activeKeysCount = 0;
+    if (dbStatus === "UP") {
+        try {
+            activeKeysCount = await ApiKey.countDocuments({ isActive: true, usageCount: { $lt: 100 } });
+        } catch (e) {
+            console.error("Health check key count failed", e);
+        }
+    }
+
+    const isHealthy = dbStatus === "UP" && activeKeysCount > 0;
+
+    res.status(isHealthy ? 200 : 503).json({
+        status: isHealthy ? "healthy" : "unhealthy",
+        timestamp: new Date().toISOString(),
+        details: {
+            database: dbStatus,
+            available_keys: activeKeysCount
+        }
+    });
+});
+
+// ==========================================
+// 6. DOCUMENTATION ENDPOINT (/docs)
 // ==========================================
 app.get('/docs', (req, res) => {
     const htmlDocs = `
@@ -179,6 +205,11 @@ app.get('/docs', (req, res) => {
         <p>A highly optimized, cached, and load-balanced API for extracting TeraBox metadata and direct download links.</p>
 
         <h2>Endpoints</h2>
+
+        <div class="endpoint">
+            <h3><span class="method get">GET</span> /health</h3>
+            <p>Monitors system health, checking database connection status and verifying if valid keys remain.</p>
+        </div>
 
         <div class="endpoint">
             <h3><span class="method get">GET</span> /api/fetch-terabox</h3>
@@ -226,4 +257,4 @@ app.get('/docs', (req, res) => {
 
 // Start Server
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 TeraBox API Server running on http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(X= `🚀 TeraBox API Server running on http://localhost:${PORT}`));
