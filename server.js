@@ -257,4 +257,4 @@ app.get('/docs', (req, res) => {
 
 // Start Server
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(X= `🚀 TeraBox API Server running on http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`🚀 TeraBox API Server running on http://localhost:${PORT}`));
